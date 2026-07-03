@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruta a Grecia — Panel de billetes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10161c;
+    --panel:#171f27;
+    --panel-2:#1c2530;
+    --line:#2a3542;
+    --amber:#ffb703;
+    --amber-dim:#8a6410;
+    --teal:#3ea8a0;
+    --text:#e7e5df;
+    --text-dim:#8b93a0;
+    --text-faint:#5b6472;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    padding:0 0 3rem;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 0;}
+  .app-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:22px;
+    letter-spacing:0.3px;
+    margin:0 0 2px;
+  }
+  .app-sub{
+    color:var(--text-dim);
+    font-size:13px;
+    margin:0 0 1.5rem;
+  }
+  .hero{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:1.25rem 1.25rem 1.4rem;
+    margin-bottom:1.5rem;
+  }
+  .hero-label{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 10px;
+  }
+  .hero-route{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:20px;
+    margin:0 0 4px;
+  }
+  .hero-when{
+    color:var(--text-dim);
+    font-size:13px;
+    margin:0 0 16px;
+  }
+  .countdown{
+    display:flex;
+    gap:10px;
+  }
+  .cd-cell{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    flex:1;
+    text-align:center;
+    padding:10px 4px;
+  }
+  .cd-num{
+    font-size:26px;
+    font-weight:600;
+    color:var(--amber);
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .cd-unit{
+    font-size:10px;
+    color:var(--text-faint);
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-top:4px;
+  }
+  .hero-note{
+    margin-top:14px;
+    font-size:12px;
+    color:var(--text-dim);
+    border-top:1px solid var(--line);
+    padding-top:10px;
+  }
+  .hero-note b{color:var(--text);font-weight:600;}
+  .section-label{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    margin:0 0 10px;
+  }
+  .leg{
+    display:grid;
+    grid-template-columns:44px 1fr auto;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+    align-items:start;
+  }
+  .leg:last-child{border-bottom:none;}
+  .leg-num{
+    font-size:11px;
+    color:var(--text-faint);
+    padding-top:2px;
+  }
+  .leg-route{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:500;
+    font-size:15px;
+    margin:0 0 3px;
+  }
+  .leg-detail{
+    font-size:12px;
+    color:var(--text-dim);
+    line-height:1.6;
+  }
+  .leg-detail .addr{color:var(--text-faint);}
+  .leg-times{
+    text-align:right;
+    font-size:13px;
+    white-space:nowrap;
+  }
+  .leg-times .dep{color:var(--text);font-weight:500;}
+  .leg-times .arr{color:var(--text-dim);font-size:12px;margin-top:2px;}
+  .badge{
+    display:inline-block;
+    font-size:10px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    padding:2px 8px;
+    border-radius:20px;
+    margin-top:6px;
+  }
+  .badge.done{background:rgba(62,168,160,0.15);color:var(--teal);}
+  .badge.next{background:rgba(255,183,3,0.15);color:var(--amber);}
+  .badge.pending{background:rgba(139,147,160,0.1);color:var(--text-faint);}
+  .conn-warning{
+    background:rgba(226,75,74,0.1);
+    border:1px solid rgba(226,75,74,0.3);
+    color:#e29a99;
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:6px;
+    margin:-6px 0 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="app-title">Zaragoza → Grecia</p>
+  <p class="app-sub">Panel de billetes de autobús · Interrail</p>
+  <p class="app-sub" style="margin-top:-8px;">Horas locales de cada país (España/Francia/Eslovenia/Croacia/Italia UTC+2 · Bulgaria/Grecia UTC+3)</p>
+
+  <div class="hero" id="hero"></div>
+
+  <p class="section-label">Todos los trayectos</p>
+  <div id="legs"></div>
+</div>
+
+<script>
+const BUFFER_MIN = 45;
+
+const legs = [
+  {
+    from: "Zaragoza (Estación Central de Autobuses)",
+    fromAddr: "Calle de Miguel Roca i Junyent, 50011 Zaragoza",
+    to: "Marsella (Saint-Charles)",
+    toAddr: "Gare Routière Saint-Charles, 13003 Marseille",
+    dep: "2026-07-20T23:00:00+02:00",
+    arr: "2026-07-21T10:00:00+02:00",
+    route: "Ruta N1138 · FlixBus"
+  },
+  {
+    from: "Marsella (Saint-Charles)",
+    fromAddr: "Gare Routière Saint-Charles, 13003 Marseille",
+    to: "Estación de Autobuses de Liubliana",
+    toAddr: "Trg Osvobodilne fronte 4, 1000 Ljubljana",
+    dep: "2026-07-21T18:10:00+02:00",
+    arr: "2026-07-22T10:25:00+02:00",
+    route: "Ruta N482 · FlixBus"
+  },
+  {
+    from: "Estación de Autobuses de Liubliana",
+    fromAddr: "Trg Osvobodilne fronte 4, 1000 Ljubljana",
+    to: "Sofía (Estación de Autobuses Serdika)",
+    toAddr: "Bulevard Knyaginya Mariya Luiza 102, 1202 Sofia",
+    dep: "2026-07-22T17:25:00+02:00",
+    arr: "2026-07-23T09:35:00+03:00",
+    route: "Ruta N981 · FlixBus"
+  },
+  {
+    from: "Sofía (Estación de Autobuses Serdika)",
+    fromAddr: "Bulevard Knyaginya Mariya Luiza 102, 1202 Sofia",
+    to: "Estación de tren de Tesalónica",
+    toAddr: "Monastiriou 28, 54627 Thessaloniki",
+    dep: "2026-07-23T17:50:00+03:00",
+    arr: "2026-07-23T22:30:00+03:00",
+    route: "Ruta 983 · FlixBus"
+  },
+  {
+    from: "Estación de tren de Tesalónica",
+    fromAddr: "Monastiriou 28, 54627 Thessaloniki",
+    to: "Sofía (Estación de Autobuses Serdika)",
+    toAddr: "Bulevard Knyaginya Mariya Luiza 102, 1202 Sofia",
+    dep: "2026-07-30T17:30:00+03:00",
+    arr: "2026-07-30T22:45:00+03:00",
+    route: "Ruta N980 · FlixBus"
+  },
+  {
+    from: "Sofía (Estación de Autobuses Serdika)",
+    fromAddr: "Bulevard Knyaginya Mariya Luiza 102, 1202 Sofia",
+    to: "Zagreb (Estación de Autobuses)",
+    toAddr: "Avenija Marina Držića 4, 10000 Zagreb",
+    dep: "2026-07-31T11:20:00+03:00",
+    arr: "2026-07-31T23:00:00+02:00",
+    route: "Ruta N981 · FlixBus"
+  },
+  {
+    from: "Zagreb (Estación de Autobuses)",
+    fromAddr: "Avenija Marina Držića 4, 10000 Zagreb",
+    to: "Estación de Autobuses de Liubliana",
+    toAddr: "Trg Osvobodilne fronte 4, 1000 Ljubljana",
+    dep: "2026-08-01T02:10:00+02:00",
+    arr: "2026-08-01T04:35:00+02:00",
+    route: "Ruta N73 · FlixBus"
+  },
+  {
+    from: "Estación de Autobuses de Liubliana",
+    fromAddr: "Trg Osvobodilne fronte 4, 1000 Ljubljana",
+    to: "Venecia Mestre (Estación FS)",
+    toAddr: "Viale Stazione 8/8c, 30171 Mestre",
+    dep: "2026-08-01T05:05:00+02:00",
+    arr: "2026-08-01T09:10:00+02:00",
+    route: "Ruta N536 · FlixBus"
+  },
+  {
+    from: "Venecia Mestre (Estación FS)",
+    fromAddr: "Viale Stazione 8/8c, 30171 Mestre",
+    to: "Marsella (Saint-Charles)",
+    toAddr: "Gare Routière Saint-Charles, 13003 Marseille",
+    dep: "2026-08-02T00:50:00+02:00",
+    arr: "2026-08-02T12:40:00+02:00",
+    route: "Ruta N482 · FlixBus"
+  },
+  {
+    from: "Marsella (Saint-Charles)",
+    fromAddr: "Gare Routière Saint-Charles, 13003 Marseille",
+    to: "Zaragoza (Estación Central de Autobuses)",
+    toAddr: "Calle de Miguel Roca i Junyent, 50011 Zaragoza",
+    dep: "2026-08-02T19:40:00+02:00",
+    arr: "2026-08-03T06:40:00+02:00",
+    route: "Ruta N1138 · FlixBus"
+  }
+];
+
+legs.sort((a,b) => new Date(a.dep) - new Date(b.dep));
+
+function fmtDate(d){
+  return d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'short' });
+}
+function fmtTime(d){
+  return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function render(){
+  const now = new Date();
+  const heroEl = document.getElementById('hero');
+  const legsEl = document.getElementById('legs');
+
+  const next = legs.find(l => new Date(l.dep) > now);
+
+  if(next){
+    const dep = new Date(next.dep);
+    const limit = new Date(dep.getTime() - BUFFER_MIN*60000);
+    const diff = Math.max(0, dep - now);
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+
+    heroEl.innerHTML = `
+      <p class="hero-label">Próxima salida</p>
+      <p class="hero-route">${next.from.split(' (')[0]} → ${next.to.split(' (')[0]}</p>
+      <p class="hero-when">${fmtDate(dep)} · sale a las ${fmtTime(dep)}</p>
+      <div class="countdown">
+        <div class="cd-cell"><div class="cd-num">${days}</div><div class="cd-unit">días</div></div>
+        <div class="cd-cell"><div class="cd-num">${pad(hours)}</div><div class="cd-unit">horas</div></div>
+        <div class="cd-cell"><div class="cd-num">${pad(mins)}</div><div class="cd-unit">min</div></div>
+        <div class="cd-cell"><div class="cd-num">${pad(secs)}</div><div class="cd-unit">seg</div></div>
+      </div>
+      <div class="hero-note">Llega antes de las <b>${fmtTime(limit)}</b> a la estación (margen de ${BUFFER_MIN} min sobre la salida).</div>
+    `;
+  } else {
+    heroEl.innerHTML = `<p class="hero-label">Ruta completada</p><p class="hero-route">Ya has llegado a Tesalónica</p>`;
+  }
+
+  legsEl.innerHTML = legs.map((l, i) => {
+    const dep = new Date(l.dep);
+    const arr = new Date(l.arr);
+    const isNext = l === next;
+    let badge = '<span class="badge pending">Pendiente</span>';
+    if(dep < now) badge = '<span class="badge done">Completado</span>';
+    if(isNext) badge = '<span class="badge next">Próximo</span>';
+
+    let gapWarning = '';
+    const nextLeg = legs[i+1];
+    if(nextLeg){
+      const gapMin = Math.round((new Date(nextLeg.dep) - arr) / 60000);
+      if(gapMin < 60){
+        gapWarning = `<div class="conn-warning">Conexión ajustada en ${l.to.split(' (')[0]}: solo ${gapMin} min hasta el siguiente bus.</div>`;
+      }
+    }
+
+    return `
+      <div class="leg">
+        <div class="leg-num">${i+1}</div>
+        <div>
+          <p class="leg-route">${l.from.split(' (')[0]} → ${l.to.split(' (')[0]}</p>
+          <div class="leg-detail">
+            ${l.route}<br>
+            <span class="addr">${l.fromAddr}</span>
+          </div>
+          ${badge}
+        </div>
+        <div class="leg-times">
+          <div class="dep">${fmtDate(dep)}<br>${fmtTime(dep)}</div>
+          <div class="arr">llega ${fmtTime(arr)}${dep.toDateString() !== arr.toDateString() ? ' (+1)' : ''}</div>
+        </div>
+      </div>
+      ${gapWarning}
+    `;
+  }).join('');
+}
+
+render();
+setInterval(render, 1000);
+</script>
+</body>
+</html>
